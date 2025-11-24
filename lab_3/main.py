@@ -4,14 +4,11 @@ import validator
 
 
 def main():
-    """Основная функция приложения"""
     try:
-        lines = file_reader.read_csv_file('32.csv')
+        matrix = file_reader.read_csv_file('32.csv')
 
-        invalid_rows = validator.process_csv_data(lines)
-
+        invalid_rows = validator.process_csv_data(matrix)
         control_sum = checksum.calculate_checksum(invalid_rows)
-
         checksum.serialize_result(32, control_sum)
 
         print(f"Найдено невалидных строк: {len(invalid_rows)}")
