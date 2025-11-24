@@ -25,29 +25,39 @@ def validate_row(row: dict) -> bool:
 
 def process_csv_data(lines: list) -> list:
     """Обрабатывает данные CSV и возвращает номера невалидных строк"""
-    invalid_rows = []
 
+    row_data = [
+        'telephone',
+        'height',
+        'inn',
+        'identifier',
+        'occupation',
+        'latitude',
+        'blood_type',
+        'issn',
+        'uuid',
+        'date'
+    ]
+    patterns_list = [PATTERNS[field] for field in column_order]
+
+    matrix = []
     for i, line in enumerate(lines[1:], 0):
+        if not line.strip():
+            continue
+
         fields = line.strip().split(';')
 
         if len(fields) < 10:
-            invalid_rows.append(i)
             continue
 
-        row_data = {
-            'telephone': fields[0].strip('"'),
-            'height': fields[1].strip('"'),
-            'inn': fields[2].strip('"'),
-            'identifier': fields[3].strip('"'),
-            'occupation': fields[4].strip('"'),
-            'latitude': fields[5].strip('"'),
-            'blood_type': fields[6].strip('"'),
-            'issn': fields[7].strip('"'),
-            'uuid': fields[8].strip('"'),
-            'date': fields[9].strip('"')
-        }
+        else:
+            clean_fields = [field.strip('"') for field in fields[:10]]
+            matrix.append(clean_fields)
 
+    invalid_rows = []
+    for i in range(len(matrix)):
         if not validate_row(row_data):
             invalid_rows.append(i)
 
     return invalid_rows
+
