@@ -7,57 +7,23 @@ from patterns import PATTERNS
 """
 
 
-def validate_field(field_name: str, value: str) -> bool:
+def validate_field(row: int, matrix: list, column: int, pattern: str) -> bool:
     """Валидация одного поля по регулярному выражению"""
-    if field_name not in PATTERNS:
-        return True
-    pattern = PATTERNS[field_name]
+    value = str(matrix[row][column]).strip()
     return bool(re.match(pattern, value))
 
 
-def validate_row(row: dict) -> bool:
+def validate_row(matrix: list, patterns: list) -> list[int]:
     """Валидация всей строки"""
-    for field, value in row.items():
-        if not validate_field(field, value):
-            return False
-    return True
-
-
-def process_csv_data(lines: list) -> list:
-    """Обрабатывает данные CSV и возвращает номера невалидных строк"""
-
-    row_data = [
-        'telephone',
-        'height',
-        'inn',
-        'identifier',
-        'occupation',
-        'latitude',
-        'blood_type',
-        'issn',
-        'uuid',
-        'date'
-    ]
-    patterns_list = [PATTERNS[field] for field in column_order]
-
-    matrix = []
-    for i, line in enumerate(lines[1:], 0):
-        if not line.strip():
-            continue
-
-        fields = line.strip().split(';')
-
-        if len(fields) < 10:
-            continue
-
-        else:
-            clean_fields = [field.strip('"') for field in fields[:10]]
-            matrix.append(clean_fields)
-
     invalid_rows = []
     for i in range(len(matrix)):
-        if not validate_row(row_data):
-            invalid_rows.append(i)
-
+        for j in range(len(matrix[i])):
+            if not validate_field(i, matrix, j, patterns[j]):
+                invalid_rows.append(i)
+                break
     return invalid_rows
 
+
+def process_csv_data(matrix: list) -> list:
+    """Обрабатывает данные CSV и возвращает номера невалидных строк"""
+    return validate_row(matrix, PATTERNS)
