@@ -1,4 +1,5 @@
 import chardet
+import pandas as pd
 
 """
 Чтение csv-файла с проверкой кодировки
@@ -8,9 +9,9 @@ import chardet
 def read_csv_file(file_path: str) -> list:
     """
     Читает CSV файл с проверкой кодировки
-
-    Returns:
-        list: список строк файла
+    С помощью pandas считывает данные и преобразует в список списков
+    :param file_path: путь к csv файлу
+    :return: матрица данных - список списков
     """
     with open(file_path, 'rb') as f:
         raw_data = f.read()
@@ -19,8 +20,5 @@ def read_csv_file(file_path: str) -> list:
     encoding = result['encoding']
     print(f"Кодировка файла: {encoding}")
 
-    with open(file_path, 'r', encoding=encoding) as f:
-        lines = f.readlines()
-
-    print(f"Файл успешно прочитан, строк: {len(lines)}")
-    return lines
+    matrix = pd.read_csv(file_path, sep=';', encoding=encoding)
+    return matrix.values.tolist()
