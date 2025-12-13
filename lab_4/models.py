@@ -36,32 +36,40 @@ class DecoderAttenRNN(nn.Module):
         self.hidden2label = nn.Linear(hidden_size, output_size)
         self.atten_affine = nn.Linear(hidden_size*2, hidden_size)
 
-    def get_alpha(self, hi, encoder_output):
-        # hi shape (1, batch_size, hidden_size)
-        # encoder_output (batch, seq_len, hidden_size)
-        hi = hi.permute(1, 2, 0)   # (batch_size, hidden_size, 1)
-        # print(encoder_output.shape, hi.shape)
-        e = torch.bmm(encoder_output, hi).squeeze(2)  # (batch_size, seq_len)
-        e = F.softmax(e, dim=1).unsqueeze(2)       # (batch_size, seq_len, 1)
-        alpha = (e * encoder_output).sum(dim=1)    # (batch_size, hidden_size)
+    def calculate_attention(self, decoder_hidden, encoder_output):
+        # Транспонирование для матричного умножения
+        decoder_hidden = decoder_hidden.permute(1, 2, 0)   # (batch_size, hidden_size, 1)
+        # Вычисление баллов внимания
+        scores = torch.bmm(encoder_output, decoder_hidden).squeeze(2)  # (batch_size, seq_len)
+        # Применение softmax для получения весов внимания
+        attention_weights = F.softmax(scores, dim=1).unsqueeze(2)       # (batch_size, seq_len, 1)
+        # Вычисление контекстного вектора (взвешенная сумма)
+        context_vector = (attention_weights * encoder_output).sum(dim=1)    # (batch_size, hidden_size)
 
-        return alpha
+        return context_vector
 
     def forward(self, x, init_state, seq_encoder_output):
-        # print(x.shape, init_state.shape, seq_encoder_output.shape)
-        batch_size, max_len, _ = x.shape  # 独热码表示
-        hi = init_state
-        seq_decoder_output = []
+        batch_size, max_len, _ = x.shape
+        current_hidden = init_state
+        decoder_outputs = []
+
         for i in range(max_len):
-            # alpha shape (batch_size, hidden_size)
-            alpha = self.get_alpha(hi, seq_encoder_output)  # alpha 表示当前time step的隐状态矩阵和encoder的各个time step输出的关联
-            hi = torch.cat([alpha.unsqueeze(0), hi], dim=2)
-            hi = self.atten_affine(hi)
-            output, hi = self.gru(x[:, i, :].unsqueeze(1), hi)
-            seq_output = self.hidden2label(output.squeeze(1))
-            seq_decoder_output.append(seq_output.squeeze(1))
-        seq_decoder_output = torch.stack(seq_decoder_output, dim=1)
-        return seq_decoder_output, hi
+            # Вычисление attention вектора
+            attention_context = self.calculate_attention(current_hidden, seq_encoder_output)
+
+            # Объединение attention контекста с текущим скрытым состоянием
+            combined = torch.cat([attention_context.unsqueeze(0), current_hidden], dim=2)
+            combined = self.atten_affine(combined)
+
+            # Пропуск через GRU
+            output, current_hidden = self.gru(x[:, i, :].unsqueeze(1), combined)
+
+            # Преобразование в выходное пространство
+            output = self.hidden2label(output.squeeze(1))
+            decoder_outputs.append(output)
+
+        decoder_outputs = torch.stack(decoder_outputs, dim=1)
+        return decoder_outputs, current_hidden
 
 
 class SimpleNMT(nn.Module):
