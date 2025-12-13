@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 
 class EncoderRNN(nn.Module):
+    """Кодировщик на основе GRU для преобразования входной последовательности."""
     def __init__(self, vocab_size: int, hidden_size: int, dropout: float = 0.5):
         super(EncoderRNN, self).__init__()
         self.hidden_size = hidden_size
@@ -16,6 +17,7 @@ class EncoderRNN(nn.Module):
 
 
 class DecoderRNN(nn.Module):
+    """Декодировщик на основе GRU без механизма внимания."""
     def __init__(self, vocab_size: int, hidden_size: int, output_size: int, dropout: float = 0.5):
         super(DecoderRNN, self).__init__()
         self.hidden_size = hidden_size
@@ -29,6 +31,7 @@ class DecoderRNN(nn.Module):
 
 
 class DecoderAttenRNN(nn.Module):
+    """Декодировщик с механизмом внимания."""
     def __init__(self, vocab_size: int, hidden_size: int, output_size: int, dropout: float = 0.5):
         super(DecoderAttenRNN, self).__init__()
         self.hidden_size = hidden_size
@@ -75,6 +78,7 @@ class DecoderAttenRNN(nn.Module):
 
 
 class SimpleNMT(nn.Module):
+    """Простая модель машинного перевода с опциональным вниманием."""
     def __init__(self, in_vocab_size: int, out_vocab_size: int,
                  in_hidden_size: int, out_hidden_size: int,
                  output_size: int, with_attention: bool = False):

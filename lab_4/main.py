@@ -32,7 +32,7 @@ def load_data(CONFIG: Dict[str, Any], debug: bool = True) -> Tuple[Any, Any, Any
 
 def create_model(source_vocab_size: int, target_vocab_size: int,
                  CONFIG: Dict[str, Any]) -> SimpleNMT:
-    """Создание модели NMT"""
+    """Создание модели машинного перевода"""
     model = SimpleNMT(
         in_vocab_size=source_vocab_size,
         out_vocab_size=target_vocab_size,
@@ -68,7 +68,7 @@ def create_embedding_layers(source_vocab_size: int,
 
 def prepare_batch(batch: Any, embed_layer1: nn.Embedding,
                  embed_layer2: nn.Embedding) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Подготовка данных батча"""
+    """Подготовка данных батча для обучения"""
     Xin = embed_layer1(batch.source.t().long()).float()
     Yin = embed_layer2(batch.target.t()[:, :-1].long()).float()
     Yout = batch.target.t()[:, 1:]
@@ -76,14 +76,14 @@ def prepare_batch(batch: Any, embed_layer1: nn.Embedding,
 
 
 def create_initial_hidden(batch_size: int, hidden_size: int) -> torch.Tensor:
-    """Создание начального скрытого состояния"""
+    """Создание начального скрытого состояния для кодировщика"""
     return torch.zeros(1, batch_size, hidden_size)
 
 
 def train_step(model: SimpleNMT, batch: Any, optimizer: optim.Adam,
                criterion: nn.CrossEntropyLoss, embed_layers: Tuple[nn.Embedding, nn.Embedding],
                hidden_size: int) -> float:
-    """Один шаг обучения"""
+    """Один шаг обучения модели"""
     optimizer.zero_grad()
 
     Xin, Yin, Yout = prepare_batch(batch, *embed_layers)
