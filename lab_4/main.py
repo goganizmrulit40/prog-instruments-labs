@@ -18,61 +18,112 @@ CONFIG = {
     'Ty': 10
 }
 
+
+def load_data(CONFIG, debug=True):
+    """Загрузка и подготовка данных"""
+    train_iter, val_iter, source_vocab, target_vocab = dataset2dataloader(
+        dataset_path=r"../dataset/date-normalization",
+        batch_size=CONFIG['batch_size'],
+        dataset_size=10000,
+        debug=debug
+    )
+    return train_iter, val_iter, source_vocab, target_vocab
+
+
+def create_model(source_vocab_size, target_vocab_size, CONFIG):
+    """Создание модели NMT"""
+    model = SimpleNMT(
+        in_vocab_size=source_vocab_size,
+        out_vocab_size=target_vocab_size,
+        in_hidden_size=CONFIG['hidden_size'],
+        out_hidden_size=CONFIG['hidden_size'],
+        output_size=target_vocab_size,
+        with_attention=True
+    )
+    return model
+
+
+def create_optimizer_and_criterion(model, CONFIG):
+    """Создание оптимизатора и функции потерь"""
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
+    criterion = nn.CrossEntropyLoss()
+    return optimizer, criterion
+
+
+def create_embedding_layers(source_vocab_size, target_vocab_size):
+    """Создание embedding слоев с one-hot кодированием"""
+    embed_layer1 = nn.Embedding(
+        source_vocab_size, source_vocab_size,
+        _weight=torch.from_numpy(np.eye(source_vocab_size))
+    )
+    embed_layer2 = nn.Embedding(
+        target_vocab_size, target_vocab_size,
+        _weight=torch.from_numpy(np.eye(target_vocab_size))
+    )
+    return embed_layer1, embed_layer2
+
+
+def prepare_batch(batch, embed_layer1, embed_layer2):
+    """Подготовка данных батча"""
+    Xin = embed_layer1(batch.source.t().long()).float()
+    Yin = embed_layer2(batch.target.t()[:, :-1].long()).float()
+    Yout = batch.target.t()[:, 1:]
+    return Xin, Yin, Yout
+
+
+def create_initial_hidden(batch_size, hidden_size):
+    """Создание начального скрытого состояния"""
+    return torch.zeros(1, batch_size, hidden_size)
+
+
+def train_step(model, batch, optimizer, criterion, embed_layers, hidden_size):
+    """Один шаг обучения"""
+    optimizer.zero_grad()
+
+    Xin, Yin, Yout = prepare_batch(batch, *embed_layers)
+    init_hidden = create_initial_hidden(len(Xin), hidden_size)
+
+    logits = model(Xin, init_hidden, Yin)
+    loss = criterion(logits.view(-1, logits.shape[-1]), Yout.flatten())
+
+    loss.backward()
+    optimizer.step()
+
+    return loss.item()
+
+
+def train_model(model, train_iter, optimizer, criterion, embed_layers, CONFIG):
+    """Обучение модели на всех эпохах"""
+    model.train()
+
+    for ep in range(CONFIG['epoch']):
+        epoch_loss = 0
+
+        for batch in train_iter:
+            loss_value = train_step(model, batch, optimizer, criterion, embed_layers, CONFIG['hidden_size'])
+            epoch_loss += loss_value
+
+        if ep % (CONFIG['epoch'] // 10) == 0:
+            print(f"Эпоха {ep}, loss: {epoch_loss}")
+
+
 if __name__ == "__main__":
-    train_iter, val_iter, source_vocab, target_vocab = dataset2dataloader(dataset_path=r"../dataset/date-normalization",
-                                                                          batch_size=CONFIG['batch_size'], dataset_size=10000, debug=True)
+    # 1. Загрузка данных
+    train_iter, val_iter, source_vocab, target_vocab = load_data(CONFIG)
     source_vocab_size = len(source_vocab.stoi)
     target_vocab_size = len(target_vocab.stoi)
 
-    model = SimpleNMT(in_vocab_size=source_vocab_size, out_vocab_size=target_vocab_size, in_hidden_size=CONFIG['hidden_size'],
-                      out_hidden_size=CONFIG['hidden_size'], output_size=target_vocab_size, with_attention=True)
+    # 2. Создание модели
+    model = create_model(source_vocab_size, target_vocab_size, CONFIG)
 
-    optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
-    criterion = nn.CrossEntropyLoss()
+    # 3. Создание оптимизатора
+    optimizer, criterion = create_optimizer_and_criterion(model, CONFIG)
 
-    embed_layer1 = nn.Embedding(source_vocab_size, source_vocab_size,
-                                _weight=torch.from_numpy(np.eye(source_vocab_size)))
-    embed_layer2 = nn.Embedding(target_vocab_size, target_vocab_size,
-                                _weight=torch.from_numpy(np.eye(target_vocab_size)))
+    # 4. Создание embedding слоев
+    embed_layers = create_embedding_layers(source_vocab_size, target_vocab_size)
 
-    model.train()
-    for ep in range(CONFIG['epoch']):
-        epoch_loss = 0
-        for batch in train_iter:
-            optimizer.zero_grad()
-            Xin, Yin, Yout = batch.source.t().long(), batch.target.t()[:, :-1].long(), batch.target.t()[:, 1:]
-            batch_size = len(Xin)
-            init_hidden = torch.zeros(1, batch_size, CONFIG['hidden_size'])
-
-            Xin = embed_layer1(Xin).float()
-            Yin = embed_layer2(Yin).float()
-            logits = model(Xin, init_hidden, Yin)
-            loss = criterion(logits.view(-1, logits.shape[-1]), Yout.flatten())
-            epoch_loss += loss.item()
-            loss.backward()
-            optimizer.step()
-        if ep % (CONFIG['epoch'] // 10) == 0:
-            print("loss", epoch_loss)
-
-    sents_for_large = ["monday may 7 1983", "19 march 1998", "18 jul 2008", "9/10/70", "thursday january 1 1981",
-                       "thursday january 26 2015", "saturday april 18 1990", "sunday may 12 1988"]
-    sents = ["monday march 7 1983", "9 may 1998", "thursday january 26 1995", "9/10/70"]
-
-
-    def translate(model, sents):
-        X = []
-        for sent in sents:
-            X.append(list(map(lambda x: source_vocab[x], list(sent))) + [source_vocab["<pad>"]] * (CONFIG['Tx'] - len(sent)))
-        Xoh = torch.from_numpy(np.array(list(map(lambda x: to_categorical(x, num_classes=source_vocab_size), X))))
-        Xoh = Xoh.float()
-        encoder_init_hidden = torch.zeros(1, len(X), CONFIG['hidden_size'])
-        preds = model(Xoh, encoder_init_hidden, decoder_input=None, out_word2index=target_vocab.stoi,
-                      out_index2word=target_vocab.itos, max_len=CONFIG['Ty'], out_size=target_vocab_size)
-        for gold, pred in zip(sents, preds):
-            print(gold, "-->", "".join(pred))
-
-
-    translate(model, sents)
+    # 5. Обучение
+    train_model(model, train_iter, optimizer, criterion, embed_layers, CONFIG)
 
     """ 不使用 attention
     dataset_size : 10000
