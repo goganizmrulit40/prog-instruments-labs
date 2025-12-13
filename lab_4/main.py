@@ -9,25 +9,25 @@ import numpy as np
 from pprint import pprint
 from tqdm import tqdm
 
-if __name__ == "__main__":
-    epoch = 500
-    learning_rate = 0.001
-    hidden_size = 64
-    batch_size = 10
+CONFIG = {
+    'epoch': 500,
+    'learning_rate': 0.001,
+    'hidden_size': 64,
+    'batch_size': 10,
+    'Tx': 25,
+    'Ty': 10
+}
 
+if __name__ == "__main__":
     train_iter, val_iter, source_vocab, target_vocab = dataset2dataloader(dataset_path=r"../dataset/date-normalization",
-                                                                          batch_size=batch_size, dataset_size=10000, debug=True)
+                                                                          batch_size=CONFIG['batch_size'], dataset_size=10000, debug=True)
     source_vocab_size = len(source_vocab.stoi)
     target_vocab_size = len(target_vocab.stoi)
 
-    # print(target_vocab.stoi)
+    model = SimpleNMT(in_vocab_size=source_vocab_size, out_vocab_size=target_vocab_size, in_hidden_size=CONFIG['hidden_size'],
+                      out_hidden_size=CONFIG['hidden_size'], output_size=target_vocab_size, with_attention=True)
 
-    Tx, Ty = 25, 10  # 最大长度
-
-    model = SimpleNMT(in_vocab_size=source_vocab_size, out_vocab_size=target_vocab_size, in_hidden_size=hidden_size,
-                      out_hidden_size=hidden_size, output_size=target_vocab_size, with_attention=True)
-
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
     criterion = nn.CrossEntropyLoss()
 
     embed_layer1 = nn.Embedding(source_vocab_size, source_vocab_size,
@@ -36,15 +36,14 @@ if __name__ == "__main__":
                                 _weight=torch.from_numpy(np.eye(target_vocab_size)))
 
     model.train()
-    for ep in range(epoch):
+    for ep in range(CONFIG['epoch']):
         epoch_loss = 0
         for batch in train_iter:
             optimizer.zero_grad()
             Xin, Yin, Yout = batch.source.t().long(), batch.target.t()[:, :-1].long(), batch.target.t()[:, 1:]
             batch_size = len(Xin)
-            init_hidden = torch.zeros(1, batch_size, hidden_size)
-            # if ep == epoch - 1:
-            #     print(Yout)
+            init_hidden = torch.zeros(1, batch_size, CONFIG['hidden_size'])
+
             Xin = embed_layer1(Xin).float()
             Yin = embed_layer2(Yin).float()
             logits = model(Xin, init_hidden, Yin)
@@ -52,17 +51,8 @@ if __name__ == "__main__":
             epoch_loss += loss.item()
             loss.backward()
             optimizer.step()
-        if ep % (epoch // 10) == 0:
+        if ep % (CONFIG['epoch'] // 10) == 0:
             print("loss", epoch_loss)
-
-    # 测试训练集输出是否正确
-    # for batch in train_iter:
-    #     # print(batch.source.t())
-    #     print(batch.target.t()[:, 1:])
-    # print("finish")
-    # init_hidden = torch.zeros(1, batch_size, hidden_size)
-    # logits = model(Xin, init_hidden, Yin)
-    # print(logits.argmax(-1))
 
     sents_for_large = ["monday may 7 1983", "19 march 1998", "18 jul 2008", "9/10/70", "thursday january 1 1981",
                        "thursday january 26 2015", "saturday april 18 1990", "sunday may 12 1988"]
@@ -72,12 +62,12 @@ if __name__ == "__main__":
     def translate(model, sents):
         X = []
         for sent in sents:
-            X.append(list(map(lambda x: source_vocab[x], list(sent))) + [source_vocab["<pad>"]] * (Tx - len(sent)))
+            X.append(list(map(lambda x: source_vocab[x], list(sent))) + [source_vocab["<pad>"]] * (CONFIG['Tx'] - len(sent)))
         Xoh = torch.from_numpy(np.array(list(map(lambda x: to_categorical(x, num_classes=source_vocab_size), X))))
         Xoh = Xoh.float()
-        encoder_init_hidden = torch.zeros(1, len(X), hidden_size)
+        encoder_init_hidden = torch.zeros(1, len(X), CONFIG['hidden_size'])
         preds = model(Xoh, encoder_init_hidden, decoder_input=None, out_word2index=target_vocab.stoi,
-                      out_index2word=target_vocab.itos, max_len=Ty, out_size=target_vocab_size)
+                      out_index2word=target_vocab.itos, max_len=CONFIG['Ty'], out_size=target_vocab_size)
         for gold, pred in zip(sents, preds):
             print(gold, "-->", "".join(pred))
 
