@@ -8,6 +8,7 @@ import torch
 import numpy as np
 from pprint import pprint
 from tqdm import tqdm
+from typing import Dict, Any, Tuple, List, Optional, Union
 
 CONFIG: Dict[str, Any] = {
     'epoch': 500,

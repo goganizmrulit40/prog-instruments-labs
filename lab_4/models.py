@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 import numpy as np
 import torch.nn.functional as F
+from typing import Tuple, Optional, Dict, List, Union, Any
 
 
 class EncoderRNN(nn.Module):
