@@ -68,10 +68,18 @@ def load_dataset(m):
         :m: the number of examples to generate
     """
     dataset = []
-    for _ in tqdm(range(m)):
-        h, m, _ = load_date()
-        if h is not None:
-            dataset.append([h, m])
+    max_attempts = m * max_attempts_multiplier
+
+    for attempt in range(max_attempts):
+        if len(dataset) >= m:
+            break
+
+        human_readable, machine_readable, _ = load_date()
+        if human_readable is not None:
+            dataset.append([human_readable, machine_readable])
+
+    if len(dataset) < m:
+        print(f"Предупреждение: сгенерировано только {len(dataset)} из {m} примеров")
 
     return dataset
 
