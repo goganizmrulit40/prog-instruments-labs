@@ -44,7 +44,7 @@ FORMATS = ['short',
 LOCALES = ['en_US']
 
 
-def load_date():
+def load_date() -> Tuple[Optional[str], Optional[str], Optional[object]]:
     """
         Loads some fake dates
         :returns: tuple containing human readable string, machine readable string, and date object
@@ -62,7 +62,7 @@ def load_date():
     return human_readable, machine_readable, dt
 
 
-def load_dataset(m):
+def load_dataset(m: int, max_attempts_multiplier: int = 2) -> List[List[str]]:
     """
         Loads a dataset with m examples and vocabularies
         :m: the number of examples to generate
@@ -84,11 +84,13 @@ def load_dataset(m):
     return dataset
 
 
-def prepare_data(dataset_path=r"../dataset/date-normalization", dataset_size=10, debug=False):
+def prepare_data(dataset_path: str = r"../dataset/date-normalization",
+                 dataset_size: int = 10,
+                 debug: bool = False) -> Tuple[str, str]:
     if debug:
         dataset_size = 10
-        train_file = os.path.join(dataset_path, "train_samll.csv")
-        eval_file = os.path.join(dataset_path, "eval_samll.csv")
+        train_file = os.path.join(dataset_path, "train_small.csv")
+        eval_file = os.path.join(dataset_path, "eval_small.csv")
     else:
         train_file = os.path.join(dataset_path, "train.csv")
         eval_file = os.path.join(dataset_path, "eval.csv")
@@ -105,7 +107,10 @@ def prepare_data(dataset_path=r"../dataset/date-normalization", dataset_size=10,
     return train_file, eval_file
 
 
-def dataset2dataloader(dataset_path, batch_size=10, dataset_size=10, debug=False):
+def dataset2dataloader(dataset_path: str,
+                       batch_size: int = 10,
+                       dataset_size: int = 10,
+                       debug: bool = False) -> Tuple[data.BucketIterator, data.BucketIterator, object, object]:
     train_csv, dev_csv = prepare_data(dataset_path, dataset_size=dataset_size, debug=debug)
 
     def tokenizer(text):

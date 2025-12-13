@@ -9,7 +9,7 @@ import numpy as np
 from pprint import pprint
 from tqdm import tqdm
 
-CONFIG = {
+CONFIG: Dict[str, Any] = {
     'epoch': 500,
     'learning_rate': 0.001,
     'hidden_size': 64,
@@ -19,7 +19,7 @@ CONFIG = {
 }
 
 
-def load_data(CONFIG, debug=True):
+def load_data(CONFIG: Dict[str, Any], debug: bool = True) -> Tuple[Any, Any, Any, Any]:
     """Загрузка и подготовка данных"""
     train_iter, val_iter, source_vocab, target_vocab = dataset2dataloader(
         dataset_path=r"../dataset/date-normalization",
@@ -30,7 +30,8 @@ def load_data(CONFIG, debug=True):
     return train_iter, val_iter, source_vocab, target_vocab
 
 
-def create_model(source_vocab_size, target_vocab_size, CONFIG):
+def create_model(source_vocab_size: int, target_vocab_size: int,
+                 CONFIG: Dict[str, Any]) -> SimpleNMT:
     """Создание модели NMT"""
     model = SimpleNMT(
         in_vocab_size=source_vocab_size,
@@ -43,14 +44,16 @@ def create_model(source_vocab_size, target_vocab_size, CONFIG):
     return model
 
 
-def create_optimizer_and_criterion(model, CONFIG):
+def create_optimizer_and_criterion(model: SimpleNMT,
+                                   CONFIG: Dict[str, Any]) -> Tuple[optim.Adam, nn.CrossEntropyLoss]:
     """Создание оптимизатора и функции потерь"""
     optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
     criterion = nn.CrossEntropyLoss()
     return optimizer, criterion
 
 
-def create_embedding_layers(source_vocab_size, target_vocab_size):
+def create_embedding_layers(source_vocab_size: int,
+                           target_vocab_size: int) -> Tuple[nn.Embedding, nn.Embedding]:
     """Создание embedding слоев с one-hot кодированием"""
     embed_layer1 = nn.Embedding(
         source_vocab_size, source_vocab_size,
@@ -63,7 +66,8 @@ def create_embedding_layers(source_vocab_size, target_vocab_size):
     return embed_layer1, embed_layer2
 
 
-def prepare_batch(batch, embed_layer1, embed_layer2):
+def prepare_batch(batch: Any, embed_layer1: nn.Embedding,
+                 embed_layer2: nn.Embedding) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Подготовка данных батча"""
     Xin = embed_layer1(batch.source.t().long()).float()
     Yin = embed_layer2(batch.target.t()[:, :-1].long()).float()
@@ -71,12 +75,14 @@ def prepare_batch(batch, embed_layer1, embed_layer2):
     return Xin, Yin, Yout
 
 
-def create_initial_hidden(batch_size, hidden_size):
+def create_initial_hidden(batch_size: int, hidden_size: int) -> torch.Tensor:
     """Создание начального скрытого состояния"""
     return torch.zeros(1, batch_size, hidden_size)
 
 
-def train_step(model, batch, optimizer, criterion, embed_layers, hidden_size):
+def train_step(model: SimpleNMT, batch: Any, optimizer: optim.Adam,
+               criterion: nn.CrossEntropyLoss, embed_layers: Tuple[nn.Embedding, nn.Embedding],
+               hidden_size: int) -> float:
     """Один шаг обучения"""
     optimizer.zero_grad()
 
@@ -92,7 +98,9 @@ def train_step(model, batch, optimizer, criterion, embed_layers, hidden_size):
     return loss.item()
 
 
-def train_model(model, train_iter, optimizer, criterion, embed_layers, CONFIG):
+def train_model(model: SimpleNMT, train_iter: Any, optimizer: optim.Adam,
+                criterion: nn.CrossEntropyLoss, embed_layers: Tuple[nn.Embedding, nn.Embedding],
+                CONFIG: Dict[str, Any]) -> None:
     """Обучение модели на всех эпохах"""
     model.train()
 
