@@ -74,40 +74,76 @@ class SimpleNMT(nn.Module):
         else:
             self.decoder = DecoderRNN(out_vocab_size, out_hidden_size, output_size)
 
-    def forward(self, encoder_input, encoder_init_hidden, decoder_input=None, out_word2index=None, out_index2word=None,
-                max_len=None, out_size=None):
-        encoder_seq_output, encoder_last_state = self.encoder(encoder_input, encoder_init_hidden)
-        # 训练时decoder每个time step输入标准答案
-        if decoder_input is not None:
-            if self.with_attention:
-                logits, _ = self.decoder(decoder_input, encoder_last_state, encoder_seq_output)
-            else:
-                logits, _ = self.decoder(decoder_input, encoder_last_state)
-            return logits
+    def _training_forward(self, encoder_input, encoder_init_hidden, decoder_input, encoder_seq_output,
+                          encoder_last_state):
+        """Прямой проход в режиме обучения"""
+        if self.with_attention:
+            logits, _ = self.decoder(decoder_input, encoder_last_state, encoder_seq_output)
         else:
-            # 测试时没有标准答案，一直解码直到出现<end>或者达到最大长度
-            decoded_sents = []
-            for i in range(len(encoder_input)):
-                sent = []
-                decoder_input = torch.FloatTensor(np.eye(out_size)[[out_word2index["<start>"]]]).unsqueeze(0).float()
-                hi = encoder_last_state[:, i, :].unsqueeze(1)
-                for di in range(max_len):
-                    if self.with_attention:
-                        # alpha = self.decoder.get_alpha(hi, encoder_seq_output[i, :, :].unsqueeze(
-                        #     0))  # alpha 表示当前time step的隐状态矩阵和encoder的各个time step输出的关联
-                        # hi = torch.cat([alpha.unsqueeze(0), hi], dim=2)
-                        # hi = self.decoder.atten_affine(hi)
-                        # # print(decoder_input.shape, hi.shape, encoder_seq_output.shape)
-                        decoder_output, hdi = self.decoder(decoder_input, hi, encoder_seq_output[i, :, :].unsqueeze(0))
-                    else:
-                        decoder_output, hdi = self.decoder(decoder_input, hi)
-                    topv, topi = decoder_output.data.topk(1)
-                    topi = topi.item()
-                    if topi == out_word2index["<end>"]:
-                        break
-                    else:
-                        sent.append(out_index2word[topi])
-                    decoder_input = torch.FloatTensor([np.eye(out_size)[topi]]).unsqueeze(0)
-                    hi = hdi
-                decoded_sents.append(sent)
-            return decoded_sents
+            logits, _ = self.decoder(decoder_input, encoder_last_state)
+        return logits
+
+    def _inference_forward(self, encoder_seq_output, encoder_last_state, out_word2index, out_index2word, max_len,
+                           out_size):
+        """Прямой проход в режиме инференса"""
+        decoded_sents = []
+        for i in range(len(encoder_seq_output)):
+            sent = self._decode_single_sequence(
+                encoder_seq_output[i],
+                encoder_last_state[:, i],
+                out_word2index,
+                out_index2word,
+                max_len,
+                out_size
+            )
+            decoded_sents.append(sent)
+        return decoded_sents
+
+    def _decode_single_sequence(self, encoder_output_single, hidden_state_single,
+                                out_word2index, out_index2word, max_len, out_size):
+        """Декодирование одной последовательности"""
+        sent = []
+        decoder_input = self._create_start_token(out_word2index, out_size)
+        hi = hidden_state_single.unsqueeze(1)
+
+        for _ in range(max_len):
+            decoder_output, hi = self._decoder_step(decoder_input, hi, encoder_output_single.unsqueeze(0))
+            token_idx = decoder_output.data.argmax(1).item()
+
+            if token_idx == out_word2index["<end>"]:
+                break
+
+            sent.append(out_index2word[token_idx])
+            decoder_input = self._create_next_token(token_idx, out_size)
+
+        return sent
+
+    def _decoder_step(self, decoder_input, hidden_state, encoder_output=None):
+        """Один шаг декодера"""
+        if self.with_attention:
+            return self.decoder(decoder_input, hidden_state, encoder_output)
+        else:
+            return self.decoder(decoder_input, hidden_state)
+
+    def _create_start_token(self, out_word2index, out_size):
+        """Создание начального токена"""
+        return torch.FloatTensor(
+            np.eye(out_size)[[out_word2index["<start>"]]]
+        ).unsqueeze(0)
+
+    def _create_next_token(self, token_idx, out_size):
+        """Создание следующего токена"""
+        return torch.FloatTensor(
+            [np.eye(out_size)[token_idx]]
+        ).unsqueeze(0)
+
+    def forward(self, encoder_input, encoder_init_hidden, decoder_input=None,
+                out_word2index=None, out_index2word=None, max_len=None, out_size=None):
+        encoder_seq_output, encoder_last_state = self.encoder(encoder_input, encoder_init_hidden)
+
+        if decoder_input is not None:
+            return self._training_forward(encoder_input, encoder_init_hidden, decoder_input,
+                                          encoder_seq_output, encoder_last_state)
+        else:
+            return self._inference_forward(encoder_seq_output, encoder_last_state,
+                                           out_word2index, out_index2word, max_len, out_size)
