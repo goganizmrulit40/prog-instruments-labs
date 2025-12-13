@@ -74,6 +74,7 @@ if __name__ == "__main__":
         for sent in sents:
             X.append(list(map(lambda x: source_vocab[x], list(sent))) + [source_vocab["<pad>"]] * (Tx - len(sent)))
         Xoh = torch.from_numpy(np.array(list(map(lambda x: to_categorical(x, num_classes=source_vocab_size), X))))
+        Xoh = Xoh.float()
         encoder_init_hidden = torch.zeros(1, len(X), hidden_size)
         preds = model(Xoh, encoder_init_hidden, decoder_input=None, out_word2index=target_vocab.stoi,
                       out_index2word=target_vocab.itos, max_len=Ty, out_size=target_vocab_size)

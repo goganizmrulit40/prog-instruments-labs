@@ -89,7 +89,7 @@ class SimpleNMT(nn.Module):
             decoded_sents = []
             for i in range(len(encoder_input)):
                 sent = []
-                decoder_input = torch.FloatTensor(np.eye(out_size)[[out_word2index["<start>"]]]).unsqueeze(0)
+                decoder_input = torch.FloatTensor(np.eye(out_size)[[out_word2index["<start>"]]]).unsqueeze(0).float()
                 hi = encoder_last_state[:, i, :].unsqueeze(1)
                 for di in range(max_len):
                     if self.with_attention:
