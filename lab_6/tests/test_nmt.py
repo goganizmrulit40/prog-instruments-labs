@@ -7,6 +7,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models import EncoderRNN
+from models import DecoderRNN
 
 
 def test_encoder_rnn_basic():
@@ -34,3 +35,33 @@ def test_encoder_rnn_basic():
     assert isinstance(last_state, torch.Tensor)
     assert seq_output.shape == (batch_size, seq_length, hidden_size)
     assert last_state.shape == (1, batch_size, hidden_size)
+
+
+def test_decoder_rnn_without_attention():
+    """Тест 2: Декодер без механизма внимания"""
+    vocab_size = 40
+    hidden_size = 64
+    output_size = 30
+    batch_size = 3
+    seq_length = 8
+
+    decoder = DecoderRNN(
+        vocab_size=vocab_size,
+        hidden_size=hidden_size,
+        output_size=output_size
+    )
+
+    assert isinstance(decoder.gru, nn.GRU)
+    assert isinstance(decoder.hidden2index, nn.Linear)
+    assert decoder.hidden2index.out_features == output_size
+
+    decoder_input = torch.randn(batch_size, seq_length, vocab_size)
+    init_state = torch.randn(1, batch_size, hidden_size)
+
+    seq_output, last_state = decoder(decoder_input, init_state)
+
+    assert seq_output.shape == (batch_size, seq_length, output_size)
+    assert last_state.shape == (1, batch_size, hidden_size)
+
+    predictions = seq_output.argmax(dim=-1)
+    assert torch.all(predictions >= 0) and torch.all(predictions < output_size)
