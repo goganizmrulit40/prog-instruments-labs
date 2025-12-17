@@ -35,13 +35,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install torch torchtext pandas
+        pip install Faker babel tqdm scikit-learn
+        pip install pytest-mock
         pip install pytest
         pip install coverage
              
     - name: Run tests
       run: |
-       coverage run -m pytest
+       coverage run -m pytest tests/ -v
 
     - name: Calculate code coverage
       run: |
