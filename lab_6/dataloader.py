@@ -8,7 +8,7 @@ from typing import Tuple, Optional, List, Dict, Any
 from torch.nn import init
 from tqdm import tqdm
 from babel.dates import format_date
-from torchtext import data
+from torchtext.legacy import data
 import pandas as pd
 from sklearn.model_selection import train_test_split
 fake = Faker()
