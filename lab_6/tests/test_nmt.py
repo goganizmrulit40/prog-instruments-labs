@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from models import EncoderRNN
 from models import DecoderRNN
+from dataloader import load_dataset
 
 
 def test_encoder_rnn_basic():
@@ -65,3 +66,31 @@ def test_decoder_rnn_without_attention():
 
     predictions = seq_output.argmax(dim=-1)
     assert torch.all(predictions >= 0) and torch.all(predictions < output_size)
+
+
+@pytest.mark.parametrize("dataset_size,min_expected", [
+    (1, 0),
+    (5, 3),
+    (10, 7),
+    (20, 15),
+])
+def test_load_dataset_parametrized(dataset_size, min_expected):
+    """Тест 3: Параметризованная проверка загрузки датасета"""
+    dataset = load_dataset(dataset_size)
+
+    assert isinstance(dataset, list)
+    assert len(dataset) <= dataset_size
+
+    if dataset_size > 0:
+        assert len(dataset) >= min_expected or len(dataset) == 0
+
+    if dataset:
+        for human_date, machine_date in dataset:
+            assert isinstance(human_date, str)
+            assert isinstance(machine_date, str)
+            assert human_date == human_date.lower()
+            assert ',' not in human_date
+
+            parts = machine_date.split('-')
+            assert len(parts) == 3
+            assert all(part.isdigit() for part in parts)
