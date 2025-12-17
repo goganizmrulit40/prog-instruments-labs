@@ -13,7 +13,6 @@ import torch.nn.functional as F
 from unittest.mock import patch, Mock, mock_open, MagicMock
 
 
-
 def test_encoder_rnn_basic():
     """Тест 1: Базовая проверка EncoderRNN"""
     vocab_size = 50
@@ -130,7 +129,7 @@ def test_attention_mechanism():
     assert torch.all(attention_weights >= 0) and torch.all(attention_weights <= 1)
 
 
-def test_simplenmt_training_mode():
+def test_simple_nmt_training_mode():
     """Тест 5: SimpleNMT в режиме обучения"""
     for with_attention in [False, True]:
         model = SimpleNMT(
@@ -158,7 +157,7 @@ def test_simplenmt_training_mode():
         assert logits.shape == (batch_size, 6, 50)
 
 
-def test_simplenmt_inference_with_mocks():
+def test_simple_nmt_inference_with_mocks():
     """Тест 6: SimpleNMT в режиме инференса с моками"""
     model = SimpleNMT(
         in_vocab_size=60,
