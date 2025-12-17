@@ -12,6 +12,7 @@ from dataloader import load_dataset
 from models import DecoderAttenRNN
 import torch.nn.functional as F
 from models import SimpleNMT
+from unittest.mock import patch, Mock
 
 
 
@@ -157,3 +158,49 @@ def test_simplenmt_training_mode():
         )
 
         assert logits.shape == (batch_size, 6, 50)
+
+
+def test_simplenmt_inference_with_mocks():
+    """Тест 6: SimpleNMT в режиме инференса с моками"""
+    model = SimpleNMT(
+        in_vocab_size=60,
+        out_vocab_size=50,
+        in_hidden_size=64,
+        out_hidden_size=64,
+        output_size=50,
+        with_attention=True
+    )
+
+    mock_word2index = {
+        "<start>": 0,
+        "<end>": 1,
+        "1980": 2,
+        "05": 3,
+        "10": 4
+    }
+    mock_index2word = {v: k for k, v in mock_word2index.items()}
+
+    encoder_input = torch.randn(2, 8, 60)
+    encoder_init_hidden = torch.zeros(1, 2, 64)
+
+    with patch.object(model, '_inference_forward') as mock_inference:
+        mock_inference.return_value = [["1980", "05", "10"], ["1999", "12", "25"]]
+
+        result = model(
+            encoder_input=encoder_input,
+            encoder_init_hidden=encoder_init_hidden,
+            out_word2index=mock_word2index,
+            out_index2word=mock_index2word,
+            max_len=10,
+            out_size=50
+        )
+
+        mock_inference.assert_called_once()
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+    start_token = model._create_start_token(mock_word2index, 50)
+    assert start_token.shape == (1, 1, 50)
+
+    next_token = model._create_next_token(2, 50)
+    assert next_token.shape == (1, 1, 50)
