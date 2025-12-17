@@ -34,8 +34,6 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip uninstall torch torchtext -y || true
-        pip install torch==2.3.0 torchtext==0.18.0 --index-url https://download.pytorch.org/whl/cpu
         if [ -f lab_6/requirements.txt ]; then pip install -r lab_6/requirements.txt; fi
         pip install pytest
         pip install coverage
