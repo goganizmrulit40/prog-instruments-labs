@@ -14,7 +14,8 @@ from unittest.mock import patch, Mock, mock_open, MagicMock
 
 
 def test_encoder_rnn_basic():
-    """Тест 1: Базовая проверка EncoderRNN"""
+    """Тест 1: Базовая проверка EncoderRNN.
+    Тестирует инициализацию и прямой проход кодировщика."""
     vocab_size = 50
     hidden_size = 64
     batch_size = 4
@@ -41,7 +42,8 @@ def test_encoder_rnn_basic():
 
 
 def test_decoder_rnn_without_attention():
-    """Тест 2: Декодер без механизма внимания"""
+    """Тест 2: Декодер без механизма внимания.
+    Тестирует архитектуру и выходные данные DecoderRNN."""
     vocab_size = 40
     hidden_size = 64
     output_size = 30
@@ -77,7 +79,9 @@ def test_decoder_rnn_without_attention():
     (20, 15),
 ])
 def test_load_dataset_parametrized(dataset_size, min_expected):
-    """Тест 3: Параметризованная проверка загрузки датасета"""
+    """Тест 3: Параметризованная проверка загрузки датасета.
+    Проверяет работу функции с разными размерами входных данных.
+    Каждый набор параметров запускается как отдельный тест."""
     dataset = load_dataset(dataset_size)
 
     assert isinstance(dataset, list)
@@ -99,7 +103,8 @@ def test_load_dataset_parametrized(dataset_size, min_expected):
 
 
 def test_attention_mechanism():
-    """Тест 4: Проверка механизма внимания"""
+    """Тест 4: Проверка механизма внимания.
+    Проверяет расчет весов внимания и контекстного вектора."""
     vocab_size = 40
     hidden_size = 64
     output_size = 30
@@ -130,7 +135,8 @@ def test_attention_mechanism():
 
 
 def test_simple_nmt_training_mode():
-    """Тест 5: SimpleNMT в режиме обучения"""
+    """Тест 5: SimpleNMT в режиме обучения.
+    Проверяет обе версии модели: с механизмом внимания и без."""
     for with_attention in [False, True]:
         model = SimpleNMT(
             in_vocab_size=60,
@@ -158,7 +164,8 @@ def test_simple_nmt_training_mode():
 
 
 def test_simple_nmt_inference_with_mocks():
-    """Тест 6: SimpleNMT в режиме инференса с моками"""
+    """Тест 6: SimpleNMT в режиме инференса с моками.
+    Использует заглушки для словарей и методов для изоляции теста."""
     model = SimpleNMT(
         in_vocab_size=60,
         out_vocab_size=50,
@@ -209,7 +216,8 @@ def test_simple_nmt_inference_with_mocks():
 @patch('pandas.DataFrame.to_csv')
 def test_prepare_data_with_mocks(mock_to_csv, mock_load_dataset,
                                  mock_read_csv, mock_exists):
-    """Тест 7: Подготовка данных с моками"""
+    """Тест 7: Подготовка данных с моками.
+    Проверяет создание файлов и работу в разных режимах (debug=True/False)."""
     mock_exists.return_value = False
 
     test_data = [
