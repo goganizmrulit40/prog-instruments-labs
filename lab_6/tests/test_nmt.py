@@ -3,16 +3,14 @@ import torch
 import torch.nn as nn
 import sys
 import os
+import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from models import EncoderRNN
-from models import DecoderRNN
-from dataloader import load_dataset
-from models import DecoderAttenRNN
+from models import EncoderRNN, DecoderRNN, DecoderAttenRNN, SimpleNMT
+from dataloader import load_dataset, prepare_data
 import torch.nn.functional as F
-from models import SimpleNMT
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, mock_open, MagicMock
 
 
 
@@ -204,3 +202,49 @@ def test_simplenmt_inference_with_mocks():
 
     next_token = model._create_next_token(2, 50)
     assert next_token.shape == (1, 1, 50)
+
+
+@patch('os.path.exists')
+@patch('pandas.read_csv')
+@patch('dataloader.load_dataset')
+@patch('pandas.DataFrame.to_csv')
+def test_prepare_data_with_mocks(mock_to_csv, mock_load_dataset,
+                                 mock_read_csv, mock_exists):
+    """Тест 7: Подготовка данных с моками"""
+    mock_exists.return_value = False
+
+    test_data = [
+        ["monday may 7 1983", "1983-05-07"],
+        ["19 march 1998", "1998-03-19"],
+        ["18 jul 2008", "2008-07-18"]
+    ]
+    mock_load_dataset.return_value = test_data
+
+    mock_read_csv.return_value = pd.DataFrame()
+
+    train_file, eval_file = prepare_data(
+        dataset_path="test_path",
+        dataset_size=10,
+        debug=True
+    )
+
+    mock_load_dataset.assert_called_once_with(10)
+    assert mock_to_csv.call_count == 2
+
+    assert isinstance(train_file, str)
+    assert isinstance(eval_file, str)
+    assert "train_small.csv" in train_file
+    assert "eval_small.csv" in eval_file
+
+    mock_load_dataset.reset_mock()
+    mock_to_csv.reset_mock()
+
+    train_file, eval_file = prepare_data(
+        dataset_path="test_path",
+        dataset_size=100,
+        debug=False
+    )
+
+    mock_load_dataset.assert_called_once_with(100)
+    assert "train.csv" in train_file
+    assert "eval.csv" in eval_file
