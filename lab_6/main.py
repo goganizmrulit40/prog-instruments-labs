@@ -1,76 +1,178 @@
-#!/usr/bin/env python
-# -*- encoding: utf-8 -*-
-"""
-Created on 2020/4/30 8:33
-@author: phil
-"""
+from keras.utils import to_categorical
+
+from dataloader import load_dataset, dataset2dataloader
+from models import SimpleNMT
 from torch import optim
+import torch.nn as nn
 import torch
-from models import TextRNN, TextCNN
-from dataloader_bytorchtext import dataset2dataloader
-from dataloader_byhand import make_dataloader
 import numpy as np
+from pprint import pprint
+from tqdm import tqdm
+from typing import Dict, Any, Tuple, List, Optional, Union
+
+CONFIG: Dict[str, Any] = {
+    'epoch': 500,
+    'learning_rate': 0.001,
+    'hidden_size': 64,
+    'batch_size': 10,
+    'Tx': 25,
+    'Ty': 10
+}
+
+
+def load_data(CONFIG: Dict[str, Any], debug: bool = True) -> Tuple[Any, Any, Any, Any]:
+    """Загрузка и подготовка данных"""
+    train_iter, val_iter, source_vocab, target_vocab = dataset2dataloader(
+        dataset_path=r"../dataset/date-normalization",
+        batch_size=CONFIG['batch_size'],
+        dataset_size=10000,
+        debug=debug
+    )
+    return train_iter, val_iter, source_vocab, target_vocab
+
+
+def create_model(source_vocab_size: int, target_vocab_size: int,
+                 CONFIG: Dict[str, Any]) -> SimpleNMT:
+    """Создание модели машинного перевода"""
+    model = SimpleNMT(
+        in_vocab_size=source_vocab_size,
+        out_vocab_size=target_vocab_size,
+        in_hidden_size=CONFIG['hidden_size'],
+        out_hidden_size=CONFIG['hidden_size'],
+        output_size=target_vocab_size,
+        with_attention=True
+    )
+    return model
+
+
+def create_optimizer_and_criterion(model: SimpleNMT,
+                                   CONFIG: Dict[str, Any]) -> Tuple[optim.Adam, nn.CrossEntropyLoss]:
+    """Создание оптимизатора и функции потерь"""
+    optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
+    criterion = nn.CrossEntropyLoss()
+    return optimizer, criterion
+
+
+def create_embedding_layers(source_vocab_size: int,
+                           target_vocab_size: int) -> Tuple[nn.Embedding, nn.Embedding]:
+    """Создание embedding слоев с one-hot кодированием"""
+    embed_layer1 = nn.Embedding(
+        source_vocab_size, source_vocab_size,
+        _weight=torch.from_numpy(np.eye(source_vocab_size))
+    )
+    embed_layer2 = nn.Embedding(
+        target_vocab_size, target_vocab_size,
+        _weight=torch.from_numpy(np.eye(target_vocab_size))
+    )
+    return embed_layer1, embed_layer2
+
+
+def prepare_batch(batch: Any, embed_layer1: nn.Embedding,
+                 embed_layer2: nn.Embedding) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Подготовка данных батча для обучения"""
+    Xin = embed_layer1(batch.source.t().long()).float()
+    Yin = embed_layer2(batch.target.t()[:, :-1].long()).float()
+    Yout = batch.target.t()[:, 1:]
+    return Xin, Yin, Yout
+
+
+def create_initial_hidden(batch_size: int, hidden_size: int) -> torch.Tensor:
+    """Создание начального скрытого состояния для кодировщика"""
+    return torch.zeros(1, batch_size, hidden_size)
+
+
+def train_step(model: SimpleNMT, batch: Any, optimizer: optim.Adam,
+               criterion: nn.CrossEntropyLoss, embed_layers: Tuple[nn.Embedding, nn.Embedding],
+               hidden_size: int) -> float:
+    """Один шаг обучения модели"""
+    optimizer.zero_grad()
+
+    Xin, Yin, Yout = prepare_batch(batch, *embed_layers)
+    init_hidden = create_initial_hidden(len(Xin), hidden_size)
+
+    logits = model(Xin, init_hidden, Yin)
+    loss = criterion(logits.view(-1, logits.shape[-1]), Yout.flatten())
+
+    loss.backward()
+    optimizer.step()
+
+    return loss.item()
+
+
+def train_model(model: SimpleNMT, train_iter: Any, optimizer: optim.Adam,
+                criterion: nn.CrossEntropyLoss, embed_layers: Tuple[nn.Embedding, nn.Embedding],
+                CONFIG: Dict[str, Any]) -> None:
+    """Обучение модели на всех эпохах"""
+    model.train()
+
+    for ep in range(CONFIG['epoch']):
+        epoch_loss = 0
+
+        for batch in train_iter:
+            loss_value = train_step(model, batch, optimizer, criterion, embed_layers, CONFIG['hidden_size'])
+            epoch_loss += loss_value
+
+        if ep % (CONFIG['epoch'] // 10) == 0:
+            print(f"Эпоха {ep}, loss: {epoch_loss}")
+
 
 if __name__ == "__main__":
-    model_names = ["LSTM", "RNN", "CNN"]  # 彩蛋：按过拟合难度排序，由难到易
-    learning_rate = 0.001
-    epoch_num = 500
-    num_of_class = 5
-    load_data_by_torchtext = True
+    # 1. Загрузка данных
+    train_iter, val_iter, source_vocab, target_vocab = load_data(CONFIG)
+    source_vocab_size = len(source_vocab.stoi)
+    target_vocab_size = len(target_vocab.stoi)
 
-    if load_data_by_torchtext:
-        train_iter, val_iter, word_vectors = dataset2dataloader(batch_size=100, debug=True)
-    else:
-        train_iter, val_iter, word_vectors, X_lang = make_dataloader(batch_size=100, debug=True)
+    # 2. Создание модели
+    model = create_model(source_vocab_size, target_vocab_size, CONFIG)
 
-    for model_name in model_names[-1:]:
-        if model_name == "RNN":
-            model = TextRNN(vocab_size=len(word_vectors), embedding_dim=50, hidden_size=128, num_of_class=num_of_class, weights=word_vectors)
-        elif model_name == "CNN":
-            model = TextCNN(vocab_size=len(word_vectors), embedding_dim=50, num_of_class=num_of_class, embedding_vectors=word_vectors)
-        elif model_name == "LSTM":
-            model = TextRNN(vocab_size=len(word_vectors), embedding_dim=50, hidden_size=128, num_of_class=num_of_class, weights=word_vectors, rnn_type="LSTM")
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        loss_fun = torch.nn.CrossEntropyLoss()
+    # 3. Создание оптимизатора
+    optimizer, criterion = create_optimizer_and_criterion(model, CONFIG)
 
-        for epoch in range(epoch_num):
-            model.train()  # 包含dropout或者BN的模型需要指定
-            for i, batch in enumerate(train_iter):
-                if load_data_by_torchtext:
-                    x, y = batch.sent.t(), batch.label
-                else:
-                    x, y, lens = batch
-                logits = model(x)
-                optimizer.zero_grad()
-                loss = loss_fun(logits, y)
-                loss.backward()
-                optimizer.step()
+    # 4. Создание embedding слоев
+    embed_layers = create_embedding_layers(source_vocab_size, target_vocab_size)
 
-            # with torch.no_grad():
-            model.eval()
-            train_accs = []
-            for i, batch in enumerate(train_iter):
-                if load_data_by_torchtext:
-                    x, y = batch.sent.t(), batch.label
-                else:
-                    x, y, lens = batch
-                _, y_pre = torch.max(logits, -1)
-                acc = torch.mean((torch.tensor(y_pre == y, dtype=torch.float)))
-                train_accs.append(acc)
-            train_acc = np.array(train_accs).mean()
+    # 5. Обучение
+    train_model(model, train_iter, optimizer, criterion, embed_layers, CONFIG)
 
-            val_accs = []
-            for i, batch in enumerate(val_iter):
-                if load_data_by_torchtext:
-                    x, y = batch.sent.t(), batch.label
-                else:
-                    x, y, lens = batch
-                logits = model(x)
-                _, y_pre = torch.max(logits, -1)
-                acc = torch.mean((torch.tensor(y_pre == y, dtype=torch.float)))
-                val_accs.append(acc)
-            val_acc = np.array(val_accs).mean()
-            print("epoch %d train acc:%.2f, val acc:%.2f" % (epoch, train_acc, val_acc))
-            if train_acc >= 0.99:
-                break
+    """ 不使用 attention
+    dataset_size : 10000
+    loss 940.5139790773392
+    loss 151.68325132876635
+    loss 17.91189043689519
+    loss 8.461621267197188
+    loss 0.4571912245155545
+    loss 4.067497536438168
+    loss 0.02432645454427984
+    loss 0.022933890589229122
+    loss 1.740354736426525
+    loss 2.7019595313686295
+    monday may 7 1983 --> 1983-05-07
+    19 march 1998 --> 1998-03-19
+    18 jul 2008 --> 2008-07-18
+    9/10/70 --> 1970-09-10
+    thursday january 1 1981 --> 1981-01-01
+    thursday january 26 2015 --> 2015-01-26
+    saturday april 18 1990 --> 1990-04-18
+    sunday may 12 1988 --> 1988-05-12
+    """
 
+    """使用attention
+    loss 870.4544065594673
+    loss 65.41884177550673
+    loss 53.339022306521656
+    loss 0.08635593753569992
+    loss 0.057157438381182146
+    loss 0.0006471980702968949
+    loss 0.09261544834953384
+    loss 0.000922315769471993
+    loss 0.00961817828419953
+    loss 0.06814217135979561
+    monday may 7 1983 --> 1983-05-07
+    19 march 1998 --> 1998-03-19
+    18 jul 2008 --> 2008-07-18
+    9/10/70 --> 1970-09-10
+    thursday january 1 1981 --> 1981-01-01
+    thursday january 26 2015 --> 2015-01-26
+    saturday april 18 1990 --> 1990-04-18
+    sunday may 12 1988 --> 1988-05-12
+    """
