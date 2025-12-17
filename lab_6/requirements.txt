@@ -1,0 +1,9 @@
+pytest-mock
+pandas
+faker
+babel
+tqdm
+scikit-learn
+torch
+torchtext
+pytest

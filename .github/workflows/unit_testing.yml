@@ -1,36 +1,48 @@
-name: Run Tests
+name: Unit testing for lab 5
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
+    branches:
+      - 'main'
+    paths:
+      - 'lab_6/**'
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  build:
+
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout your fork
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v3
       with:
         python-version: "3.12"
+        cache: 'pip'
 
-    - name: Install ALL dependencies
+    - name: Set env path
       run: |
-        python -m pip install --upgrade pip        
-        pip install torch torchtext pandas
-        pip install Faker babel tqdm scikit-learn
-        pip install pytest pytest-mock coverage
-        
-        python -c "import torch; print(f'✅ PyTorch версия: {torch.__version__}')"
-        python -c "import torchtext; print(f'✅ TorchText версия: {torchtext.__version__}')"
-        python -c "import pandas; print(f'✅ pandas версия: {pandas.__version__}')"
-        python -c "import Faker; print('✅ Faker установлен')"
+        export PYTHONPATH=.:$PYTHONPATH:lab_6/
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f lab_6/requirements.txt ]; then pip install -r lab_6/requirements.txt; fi
+        pip install pytest
+        pip install coverage
 
     - name: Run tests
       run: |
-        cd lab_6
-        coverage run -m pytest tests/ -v
+       coverage run -m pytest
+
+    - name: Calculate code coverage
+      run: |
+       coverage report
