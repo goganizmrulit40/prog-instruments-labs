@@ -11,6 +11,7 @@ from models import DecoderRNN
 from dataloader import load_dataset
 from models import DecoderAttenRNN
 import torch.nn.functional as F
+from models import SimpleNMT
 
 
 
@@ -128,3 +129,31 @@ def test_attention_mechanism():
     weights_sum = attention_weights.sum(dim=1)
     assert torch.allclose(weights_sum, torch.ones(batch_size, 1), rtol=1e-5)
     assert torch.all(attention_weights >= 0) and torch.all(attention_weights <= 1)
+
+
+def test_simplenmt_training_mode():
+    """Тест 5: SimpleNMT в режиме обучения"""
+    for with_attention in [False, True]:
+        model = SimpleNMT(
+            in_vocab_size=60,
+            out_vocab_size=50,
+            in_hidden_size=64,
+            out_hidden_size=64,
+            output_size=50,
+            with_attention=with_attention
+        )
+
+        assert model.with_attention == with_attention
+
+        batch_size = 3
+        encoder_input = torch.randn(batch_size, 8, 60)
+        encoder_init_hidden = torch.zeros(1, batch_size, 64)
+        decoder_input = torch.randn(batch_size, 6, 50)
+
+        logits = model(
+            encoder_input=encoder_input,
+            encoder_init_hidden=encoder_init_hidden,
+            decoder_input=decoder_input
+        )
+
+        assert logits.shape == (batch_size, 6, 50)
