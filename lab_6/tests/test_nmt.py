@@ -9,6 +9,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from models import EncoderRNN
 from models import DecoderRNN
 from dataloader import load_dataset
+from models import DecoderAttenRNN
+import torch.nn.functional as F
+
 
 
 def test_encoder_rnn_basic():
@@ -94,3 +97,34 @@ def test_load_dataset_parametrized(dataset_size, min_expected):
             parts = machine_date.split('-')
             assert len(parts) == 3
             assert all(part.isdigit() for part in parts)
+
+
+def test_attention_mechanism():
+    """Тест 4: Проверка механизма внимания"""
+    vocab_size = 40
+    hidden_size = 64
+    output_size = 30
+
+    decoder = DecoderAttenRNN(
+        vocab_size=vocab_size,
+        hidden_size=hidden_size,
+        output_size=output_size
+    )
+
+    batch_size = 2
+    seq_length = 7
+
+    decoder_hidden = torch.randn(1, batch_size, hidden_size)
+    encoder_output = torch.randn(batch_size, seq_length, hidden_size)
+
+    context_vector = decoder.calculate_attention(decoder_hidden, encoder_output)
+
+    assert context_vector.shape == (batch_size, hidden_size)
+
+    decoder_hidden_permuted = decoder_hidden.permute(1, 2, 0)
+    scores = torch.bmm(encoder_output, decoder_hidden_permuted).squeeze(2)
+    attention_weights = F.softmax(scores, dim=1).unsqueeze(2)
+
+    weights_sum = attention_weights.sum(dim=1)
+    assert torch.allclose(weights_sum, torch.ones(batch_size, 1), rtol=1e-5)
+    assert torch.all(attention_weights >= 0) and torch.all(attention_weights <= 1)
