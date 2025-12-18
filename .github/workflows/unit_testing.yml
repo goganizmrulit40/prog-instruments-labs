@@ -34,9 +34,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        if [ -f lab_6/requirements.txt ]; then pip install -r lab_6/requirements.txt; fi
-        pip install pytest
-        pip install coverage
+        pip install "numpy<2"
+        pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cpu
+        pip install torchtext==0.16.2 --index-url https://download.pytorch.org/whl/cpu
+        pip install pandas Faker babel tqdm scikit-learn pytest pytest-mock coverage
 
     - name: Run tests
       run: |
