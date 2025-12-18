@@ -18,6 +18,7 @@ def test_hangman_end():
     assert "// \\" in result  # ноги
 
 
+# мок глобальной переменной и функции random.choice
 def test_get_word_easy():
     """Тест выбора слова для лёгкого уровня"""
     with patch('main.DIFFICULTY_LEVEL', 'easy'), \
@@ -27,7 +28,7 @@ def test_get_word_easy():
         assert word.isupper()
 
 
-def test_getword_middle():
+def test_get_word_medium():
     """Тест выбора слова для среднего уровня"""
     with patch('main.DIFFICULTY_LEVEL', 'medium'), \
          patch('random.choice', lambda lst: lst[0]):
