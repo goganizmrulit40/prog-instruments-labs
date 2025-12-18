@@ -80,10 +80,8 @@ def test_game_correct_letter_guess():
     if guess not in word:
         assert False
 
-    # Добавляем букву в угаданные
     guessed_letters.append(guess)
 
-    # Обновляем отображение слова
     word_as_list = list(word_completion)
     indices = [i for i, letter in enumerate(word) if letter == guess]
     for index in indices:
@@ -91,4 +89,19 @@ def test_game_correct_letter_guess():
 
     result = "".join(word_as_list)
     assert result == "T__T"
+    assert guess in guessed_letters
+
+
+def test_game_wrong_letter_guess():
+    """Тест неправильного угадывания буквы"""
+    tries = 6
+    word = "TEST"
+    guess = 'X'
+    guessed_letters = []
+
+    if guess not in word:
+        tries -= 1
+        guessed_letters.append(guess)
+
+    assert tries == 5
     assert guess in guessed_letters
