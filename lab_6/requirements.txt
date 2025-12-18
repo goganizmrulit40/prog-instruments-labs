@@ -1,5 +1,5 @@
-torch==2.3.0
-torchtext==0.18.0
+torch==2.0.1
+torchtext==0.12.0
 pandas
 Faker
 babel
