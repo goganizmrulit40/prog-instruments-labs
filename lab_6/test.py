@@ -15,3 +15,17 @@ def test_hangman_end():
     result = main.hangman(0)
     assert "O" in result
     assert "\\|/" in result
+
+
+def test_get_word_easy():
+    """Тест выбора слова для лёгкого уровня"""
+    with patch('main.DIFFICULTY_LEVEL', 'easy'), \
+         patch('random.choice', lambda lst: lst[0]):
+        assert main.get_word() == "EGG"
+
+
+def test_getword_middle():
+    """Тест выбора слова для среднего уровня"""
+    with patch('main.DIFFICULTY_LEVEL', 'medium'), \
+         patch('random.choice', lambda lst: lst[0]):
+        assert main.get_word() == "SOUP"
