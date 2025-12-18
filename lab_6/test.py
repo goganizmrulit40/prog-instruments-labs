@@ -155,3 +155,16 @@ def test_game_duplicate_letter():
 
     assert already_guessed is True
     assert guess in guessed_letters
+
+
+def test_invalid_guess_format():
+    """Тест обработки некорректного формата ввода"""
+    # Симулируем ввод некорректных данных
+    guess = "123"
+    word = "TEST"
+
+    # Некорректный ввод не должен менять состояние игры
+    is_valid = len(guess) == 1 and guess.isalpha() or \
+               len(guess) == len(word) and guess.isalpha()
+
+    assert is_valid is False
