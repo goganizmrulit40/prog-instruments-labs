@@ -123,3 +123,19 @@ def test_game_win_by_whole_word():
     assert guessed is True
     assert word_completion == "TEST"
     assert guess in guessed_words
+
+
+def test_game_lose_by_tries():
+    """Тест проигрыша при исчерпании всех попыток"""
+    tries = 6
+    word = "TEST"
+    wrong_guesses = ['X', 'Y', 'Z', 'W', 'Q', 'P']
+    guessed_letters = []
+
+    for guess in wrong_guesses:
+        if guess not in word:
+            tries -= 1
+            guessed_letters.append(guess)
+
+    assert tries == 0
+    assert len(guessed_letters) == 6
