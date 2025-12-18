@@ -28,6 +28,7 @@ def test_get_word_easy():
         assert word.isupper()
 
 
+# мок глобальной переменной и функции random.choice
 def test_get_word_medium():
     """Тест выбора слова для среднего уровня"""
     with patch('main.DIFFICULTY_LEVEL', 'medium'), \
@@ -36,6 +37,7 @@ def test_get_word_medium():
         assert word == "SOUP"  # первое слово из medium_wordlist
 
 
+# мок функции input
 @pytest.mark.parametrize("user_input,expected_tries,expected_global_value", [
     ("easy", 8, "easy"),
     ("medium", 6, "medium"),
