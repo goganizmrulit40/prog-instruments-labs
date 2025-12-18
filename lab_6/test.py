@@ -105,3 +105,21 @@ def test_game_wrong_letter_guess():
 
     assert tries == 5
     assert guess in guessed_letters
+
+
+def test_game_win_by_whole_word():
+    """Тест победы при угадывании всего слова целиком"""
+    word = "TEST"
+    guessed_words = []
+    guessed = False
+
+    guess = 'TEST'
+
+    if guess == word:
+        guessed = True
+        guessed_words.append(guess)
+        word_completion = word
+
+    assert guessed is True
+    assert word_completion == "TEST"
+    assert guess in guessed_words
