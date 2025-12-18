@@ -4,31 +4,35 @@ import main
 
 
 def test_hangman_begin():
-    """Тест начального состояния виселицы"""
+    """Тест начального состояния виселицы (без человека)"""
     result = main.hangman(8)
     assert "O" not in result
     assert "|      |" in result
 
 
 def test_hangman_end():
-    """Тест финального состояния"""
+    """Тест финального состояния (полный человек)"""
     result = main.hangman(0)
-    assert "O" in result
-    assert "\\|/" in result
+    assert "O" in result  # голова
+    assert "\\|/" in result  # туловище и руки
+    assert "// \\" in result  # ноги
 
 
 def test_get_word_easy():
     """Тест выбора слова для лёгкого уровня"""
     with patch('main.DIFFICULTY_LEVEL', 'easy'), \
          patch('random.choice', lambda lst: lst[0]):
-        assert main.get_word() == "EGG"
+        word = main.get_word()
+        assert word == "EGG"  # первое слово из easy_wordlist
+        assert word.isupper()
 
 
 def test_getword_middle():
     """Тест выбора слова для среднего уровня"""
     with patch('main.DIFFICULTY_LEVEL', 'medium'), \
          patch('random.choice', lambda lst: lst[0]):
-        assert main.get_word() == "SOUP"
+        word = main.get_word()
+        assert word == "SOUP"  # первое слово из medium_wordlist
 
 
 @pytest.mark.parametrize("user_input,expected_tries,expected_global_value", [
