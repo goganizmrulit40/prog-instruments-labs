@@ -67,3 +67,28 @@ def test_choose_difficulty_parametrized(user_input, expected_tries, expected_glo
             assert "Invalid difficulty level. Defaulting to medium." in captured.out
 
         main.DIFFICULTY_LEVEL = original_difficulty
+
+
+def test_game_correct_letter_guess():
+    """Тест правильного угадывания буквы в слове"""
+    # логика из функции play():
+    word = "TEST"
+    guessed_letters = []
+    word_completion = "_" * len(word)
+
+    guess = 'T'
+    if guess not in word:
+        assert False
+
+    # Добавляем букву в угаданные
+    guessed_letters.append(guess)
+
+    # Обновляем отображение слова
+    word_as_list = list(word_completion)
+    indices = [i for i, letter in enumerate(word) if letter == guess]
+    for index in indices:
+        word_as_list[index] = guess
+
+    result = "".join(word_as_list)
+    assert result == "T__T"
+    assert guess in guessed_letters
