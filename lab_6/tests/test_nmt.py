@@ -2,6 +2,9 @@ import pytest
 import torch
 import torch.nn as nn
 import pandas as pd
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
 
 from models import EncoderRNN, DecoderRNN, DecoderAttenRNN, SimpleNMT
 from dataloader import load_dataset, prepare_data

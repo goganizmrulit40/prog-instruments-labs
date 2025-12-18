@@ -8,7 +8,7 @@ from typing import Tuple, Optional, List, Dict, Any
 from torch.nn import init
 from tqdm import tqdm
 from babel.dates import format_date
-from torchtext.legacy import data
+from torchtext.data import Field, BucketIterator, TabularDataset
 import pandas as pd
 from sklearn.model_selection import train_test_split
 fake = Faker()
@@ -106,7 +106,7 @@ def prepare_data(dataset_path: str = r"../dataset/date-normalization",
 def dataset2dataloader(dataset_path: str,
                        batch_size: int = 10,
                        dataset_size: int = 10,
-                       debug: bool = False) -> Tuple[data.BucketIterator, data.BucketIterator, object, object]:
+                       debug: bool = False) -> Tuple[BucketIterator, BucketIterator, object, object]:
     """Конвертация датасета в DataLoader для PyTorch."""
     train_csv, dev_csv = prepare_data(dataset_path, dataset_size=dataset_size, debug=debug)
 
@@ -114,17 +114,17 @@ def dataset2dataloader(dataset_path: str,
         return list(text)
 
     # Определение формата данных
-    SOURCE = data.Field(sequential=True, tokenize=tokenizer, lower=False)
-    TARGET = data.Field(sequential=True, tokenize=tokenizer, lower=False, init_token="<start>", eos_token="<end>")
-    train, val = data.TabularDataset.splits(
+    SOURCE = Field(sequential=True, tokenize=tokenizer, lower=False)
+    TARGET = Field(sequential=True, tokenize=tokenizer, lower=False, init_token="<start>", eos_token="<end>")
+    train, val = TabularDataset.splits(
         path='', train=train_csv, validation=dev_csv, format='csv', skip_header=True,
         fields=[('source', SOURCE), ('target', TARGET)])
 
     SOURCE.build_vocab(train)
     TARGET.build_vocab(train)
 
-    train_iter = data.BucketIterator(train, batch_size=batch_size, sort_key=lambda x: len(x.sent), shuffle=False)
-    val_iter = data.BucketIterator(val, batch_size=batch_size, sort_key=lambda x: len(x.sent), shuffle=False)
+    train_iter = BucketIterator(train, batch_size=batch_size, sort_key=lambda x: len(x.sent), shuffle=False)
+    val_iter = BucketIterator(val, batch_size=batch_size, sort_key=lambda x: len(x.sent), shuffle=False)
 
     # 在 test_iter , sort一定要设置成 False, 要不然会被 torchtext 搞乱样本顺序
     # test_iter = data.Iterator(dataset=test, batch_size=128, train=False, sort=False, device=DEVICE)
