@@ -139,3 +139,19 @@ def test_game_lose_by_tries():
 
     assert tries == 0
     assert len(guessed_letters) == 6
+
+
+def test_game_duplicate_letter():
+    """Тест обработки повторного ввода буквы"""
+    word = "TEST"
+    guessed_letters = ['T']
+
+    guess = 'T'
+
+    if guess in guessed_letters:
+        already_guessed = True
+    else:
+        already_guessed = False
+
+    assert already_guessed is True
+    assert guess in guessed_letters
